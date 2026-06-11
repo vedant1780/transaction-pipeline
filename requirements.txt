@@ -10,7 +10,7 @@ python-dateutil
 celery
 redis
 
-google-generativeai
+google-genai
 
 python-multipart
 
