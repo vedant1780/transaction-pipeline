@@ -1,9 +1,24 @@
 services:
-
   api:
     build: .
     ports:
       - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://postgres:root@postgres:5432/transactions
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      - postgres
+      - redis
+
+  worker:
+    build: .
+    command: celery -A app.celery_app.celery_app worker --loglevel=info -P solo
+    environment:
+      DATABASE_URL: postgresql://postgres:root@postgres:5432/transactions
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      - postgres
+      - redis
 
   postgres:
     image: postgres:16
