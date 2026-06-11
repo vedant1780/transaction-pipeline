@@ -6,4 +6,6 @@ celery_app = Celery(
     backend="redis://localhost:6379/0"
 )
 
-celery_app.autodiscover_tasks(["app.tasks.test_task"])
+celery_app.conf.imports = (
+    "app.tasks.process_csv",
+)

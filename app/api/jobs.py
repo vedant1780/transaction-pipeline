@@ -11,9 +11,9 @@ from fastapi import HTTPException
 import uuid
 from app.services.csv_processor import load_csv
 from app.models.transactions import Transaction
+from app.tasks.process_csv import process_csv
 
 router = APIRouter()
-
 @router.post("/jobs/upload")
 async def upload_csv(
     file: UploadFile = File(...),
@@ -27,6 +27,8 @@ async def upload_csv(
 
     UPLOAD_DIR = "uploads"
 
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+
     filepath = os.path.join(
         UPLOAD_DIR,
         file.filename
@@ -34,57 +36,26 @@ async def upload_csv(
 
     with open(filepath, "wb") as f:
         f.write(await file.read())
-    summary = load_csv(filepath)
-    job_id = str(uuid.uuid4())
-    jobs[job_id] = {
-    "status": "completed",
-    "filename": file.filename,
-    "raw_rows": summary["raw_rows"],
-    "clean_rows": summary["clean_rows"],
-    "anomaly_count": len(summary["anomalies"]),
-    "anomalies": summary["anomalies"],
-    "transactions": summary["data"],
-    "category_breakdown": summary["category_breakdown"]
-}
+
+    # Create pending job
     job = Job(
-    filename=file.filename,
-    status="completed",
-    raw_rows=summary["raw_rows"],
-    clean_rows=summary["clean_rows"],
-    anomaly_count=len(summary["anomalies"])
-)
+        filename=file.filename,
+        status="pending"
+    )
 
     db.add(job)
     db.commit()
     db.refresh(job)
-    for txn in summary["data"]:
 
-        transaction = Transaction(
-            job_id=job.id,
-            txn_id=str(txn.get("txn_id")),
-            date=str(txn.get("date")),
-            merchant=str(txn.get("merchant")),
-            amount=float(txn.get("amount"))
-                if txn.get("amount") is not None
-                else 0,
-            currency=str(txn.get("currency")),
-            status=str(txn.get("status")),
-            category=str(txn.get("category")),
-            account_id=str(txn.get("account_id")),
-            is_anomaly=bool(txn.get("is_anomaly")),
-            anomaly_reason=str(txn.get("anomaly_reason"))
-                if txn.get("anomaly_reason")
-                else None
-        )
+    # Queue background task
+    process_csv.delay(
+        filepath,
+        job.id
+    )
 
-        db.add(transaction)
-
-    db.commit()
-
-    return jobs[job_id] | {
-        "job_id": job_id,
-        "status": job.status
-        
+    return {
+        "job_id": job.id,
+        "status": "pending"
     }
 @router.get("/jobs/{job_id}/status")
 def get_status(
