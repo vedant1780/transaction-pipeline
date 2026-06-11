@@ -80,7 +80,8 @@ def get_status(
         "status": job.status,
         "raw_rows": job.raw_rows,
         "clean_rows": job.clean_rows,
-        "anomaly_count": job.anomaly_count
+        "anomaly_count": job.anomaly_count,
+        "summary": job.summary,
     }
 @router.get("/jobs/{job_id}/results")
 def get_results(

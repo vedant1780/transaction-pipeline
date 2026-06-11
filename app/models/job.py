@@ -20,3 +20,4 @@ class Job(Base):
     clean_rows = Column(Integer)
 
     anomaly_count = Column(Integer)
+    summary = Column(String)

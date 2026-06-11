@@ -3,7 +3,7 @@ from app.services.csv_processor import load_csv
 from app.database import SessionLocal
 from app.models.job import Job
 from app.models.transactions import Transaction
-
+from app.services.gemini_service import generate_summary
 
 @celery_app.task
 def process_csv(filepath, job_id):
@@ -21,6 +21,19 @@ def process_csv(filepath, job_id):
 
         if not job:
             return
+        # Generate AI summary
+        try:
+            summary_text = generate_summary(
+                summary["raw_rows"],
+                summary["clean_rows"],
+                summary["anomalies"],
+                summary["category_breakdown"]
+            )
+        except Exception:
+            summary_text = "AI summary temporarily unavailable."
+
+        # Save summary in Job table
+        job.summary = summary_text
 
         # Update job
         job.status = "completed"
