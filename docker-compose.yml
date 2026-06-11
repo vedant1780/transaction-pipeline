@@ -16,6 +16,7 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:root@postgres:5432/transactions
       REDIS_URL: redis://redis:6379/0
+      GEMINI_API_KEY: AQ.Ab8RN6LXVmPuRTOW2A4WSGP5XkEW-Gkh7F2lZ_S6e1TQ3rF9Fg
     depends_on:
       - postgres
       - redis

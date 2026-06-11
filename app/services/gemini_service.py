@@ -1,8 +1,9 @@
 import os
 from google import genai
-
+from dotenv import load_dotenv
+load_dotenv()
 client = genai.Client(
-    api_key="AQ.Ab8RN6LXVmPuRTOW2A4WSGP5XkEW-Gkh7F2lZ_S6e1TQ3rF9Fg"
+    api_key=os.getenv("GEMINI_API_KEY")
 )
 
 def generate_summary(
