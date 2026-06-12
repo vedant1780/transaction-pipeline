@@ -23,6 +23,7 @@ def load_csv(filepath: str):
         .astype(str)
         .str.replace("$", "", regex=False)
         .str.replace("₹", "", regex=False)
+        .str.replace(",", "", regex=False)
     )
 
     df["amount"] = pd.to_numeric(
@@ -53,6 +54,17 @@ def load_csv(filepath: str):
             .str.upper()
         )
 
+    # Remove rows missing critical fields
+    required_columns = [
+        "txn_id",
+        "account_id",
+        "amount"
+    ]
+
+    df = df.dropna(
+        subset=required_columns
+    )
+
     # Remove duplicates
     df = df.drop_duplicates()
 
@@ -68,14 +80,57 @@ def load_csv(filepath: str):
         .to_dict()
     )
 
-    # IMPORTANT:
-    # Replace all NaN values AFTER all processing
-    df = df.replace({float("nan"): None})
+    # Total INR spend
+    total_spend_inr = (
+        df.loc[
+            df["currency"] == "INR",
+            "amount"
+        ]
+        .sum()
+    )
+
+    # Total USD spend
+    total_spend_usd = (
+        df.loc[
+            df["currency"] == "USD",
+            "amount"
+        ]
+        .sum()
+    )
+
+    # Top 5 merchants
+    top_merchants = (
+        df.groupby("merchant")["amount"]
+        .sum()
+        .sort_values(ascending=False)
+        .head(5)
+        .to_dict()
+    )
+
+    # Initialize LLM columns
+    df["llm_category"] = None
+    df["llm_raw_response"] = None
+    df["llm_failed"] = False
+
+    # Replace NaN for JSON serialization
+    df = df.where(
+        pd.notnull(df),
+        None
+    )
 
     return {
         "raw_rows": raw_rows,
         "clean_rows": clean_rows,
-        "data": df.to_dict(orient="records"),
+        "data": df.to_dict(
+            orient="records"
+        ),
         "anomalies": anomalies,
-        "category_breakdown": category_breakdown
+        "category_breakdown": category_breakdown,
+        "total_spend_inr": float(
+            total_spend_inr
+        ),
+        "total_spend_usd": float(
+            total_spend_usd
+        ),
+        "top_merchants": top_merchants
     }
